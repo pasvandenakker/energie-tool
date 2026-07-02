@@ -190,7 +190,7 @@ class ZonneplanAPI {
 
   async getElectricityDaily() {
     this._ensureAuth();
-    const res = await this._get('/connections/' + this.connectionUuid + '/electricity-delivered/charts/daily');
+    const res = await this._get('/connections/' + this.connectionUuid + '/electricity-delivered/charts/days');
     if (res.status === 200 && res.data?.data) {
       const groups = res.data.data.measurement_groups || [];
       for (const g of groups) {
@@ -204,7 +204,7 @@ class ZonneplanAPI {
 
   async getElectricityMonthly() {
     this._ensureAuth();
-    const res = await this._get('/connections/' + this.connectionUuid + '/electricity-delivered/charts/monthly');
+    const res = await this._get('/connections/' + this.connectionUuid + '/electricity-delivered/charts/months');
     if (res.status === 200 && res.data?.data) {
       const groups = res.data.data.measurement_groups || [];
       for (const g of groups) {
@@ -217,17 +217,17 @@ class ZonneplanAPI {
   }
 
   async getElectricityYearly() {
-    this._ensureAuth();
-    const res = await this._get('/connections/' + this.connectionUuid + '/electricity-delivered/charts/yearly');
-    if (res.status === 200 && res.data?.data) {
-      const groups = res.data.data.measurement_groups || [];
-      for (const g of groups) {
-        if (g.type === 'years') return g.measurements || [];
-      }
-      return [];
+    // Zonneplan heeft geen 'years' chart-endpoint (geeft HTTP 400) — jaarcijfers afleiden uit de maanden.
+    const months = await this.getElectricityMonthly();
+    if (!months) return null;
+    const perYear = {};
+    for (const m of months) {
+      const year = new Date(m.date).getFullYear();
+      if (!perYear[year]) perYear[year] = { date: year + '-01-01', values: { d: 0, p: 0 } };
+      perYear[year].values.d += m.values?.d || 0;
+      perYear[year].values.p += m.values?.p || 0;
     }
-    if (res.status === 401 && await this.refreshAccessToken()) return this.getElectricityYearly();
-    return null;
+    return Object.values(perYear);
   }
 
   async getGasHourly(dateStr) {
