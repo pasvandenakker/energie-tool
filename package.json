@@ -1,0 +1,12 @@
+{
+  "name": "energiesim",
+  "version": "1.0.0",
+  "description": "EnergieSim — Weppas energie tool met P1 meter integratie",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

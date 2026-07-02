@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EnergieSim — Weppas Energie Tool</title>
+<style>
+  :root {
+    --bg: #0a0e17;
+    --surface: #111827;
+    --surface2: #1a2332;
+    --border: #1e3a5f;
+    --accent: #22d3ee;
+    --accent2: #0ea5e9;
+    --green: #4ade80;
+    --red: #fb7185;
+    --orange: #fb923c;
+    --yellow: #facc15;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --text3: #64748b;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 20px;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+
+  header {
+    text-align: center; padding: 40px 20px 30px;
+    border-bottom: 1px solid var(--border); margin-bottom: 30px;
+  }
+  header h1 {
+    font-size: 2rem; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  header p { color: var(--text2); margin-top: 6px; font-size: 1.05rem; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px; transition: border-color .2s;
+  }
+  .card:hover { border-color: var(--accent2); }
+  .card h2 { font-size: 1rem; color: var(--accent); margin-bottom: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+  .card h3 { font-size: 0.95rem; color: var(--text2); margin: 16px 0 8px; font-weight: 500; }
+  .card.wide { grid-column: 1 / -1; }
+  .card.full { grid-column: 1 / -1; }
+  .card.green h2 { color: var(--green); }
+  .card.orange h2 { color: var(--orange); }
+  .card.red h2 { color: var(--red); }
+  .card.blue h2 { color: var(--accent2); }
+
+  .input-group { margin-bottom: 14px; }
+  .input-group label {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.9rem; color: var(--text2); margin-bottom: 4px;
+  }
+  .input-group label span.value { color: var(--accent); font-weight: 600; min-width: 40px; text-align: right; }
+  input[type="range"] {
+    width: 100%; height: 6px; -webkit-appearance: none; appearance: none;
+    background: var(--surface2); border-radius: 3px; outline: none;
+    margin: 4px 0;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 50%; cursor: pointer; border: 2px solid var(--surface);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 18px; height: 18px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 50%; cursor: pointer; border: 2px solid var(--surface);
+  }
+
+  .radio-group { display: flex; gap: 8px; flex-wrap: wrap; }
+  .radio-group label {
+    padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border);
+    cursor: pointer; font-size: 0.85rem; transition: all .2s; background: var(--surface2);
+  }
+  .radio-group input { display: none; }
+  .radio-group input:checked + label { border-color: var(--accent); background: rgba(34, 211, 238, 0.1); color: var(--accent); }
+  .radio-group label:hover { border-color: var(--accent2); }
+
+  .stat-row { display: flex; gap: 12px; flex-wrap: wrap; margin: 6px 0; }
+  .stat {
+    flex: 1; min-width: 100px; background: var(--surface2); border-radius: 8px;
+    padding: 12px 16px; text-align: center;
+  }
+  .stat .val { font-size: 1.4rem; font-weight: 700; color: var(--accent); display: block; }
+  .stat .lbl { font-size: 0.75rem; color: var(--text3); text-transform: uppercase; letter-spacing: .04em; }
+  .stat.green .val { color: var(--green); }
+  .stat.red .val { color: var(--red); }
+  .stat.orange .val { color: var(--orange); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th, td { padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--border); }
+  th { color: var(--text3); font-weight: 500; text-transform: uppercase; letter-spacing: .03em; font-size: 0.7rem; }
+  td:first-child, th:first-child { text-align: left; }
+  tbody tr:hover { background: rgba(34, 211, 238, 0.03); }
+  .tot-row td { font-weight: 700; border-top: 2px solid var(--accent); color: var(--accent); }
+
+  canvas { width: 100% !important; height: auto !important; max-height: 320px; }
+
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 6px;
+    font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+  }
+  .badge.green { background: rgba(74, 222, 128, 0.15); color: var(--green); }
+  .badge.red { background: rgba(251, 113, 133, 0.15); color: var(--red); }
+  .badge.orange { background: rgba(251, 146, 60, 0.15); color: var(--orange); }
+  .badge.blue { background: rgba(14, 165, 233, 0.15); color: var(--accent2); }
+  .badge.yellow { background: rgba(250, 204, 21, 0.15); color: var(--yellow); }
+
+  .advies-box {
+    background: linear-gradient(135deg, rgba(34, 211, 238, 0.08), rgba(14, 165, 233, 0.05));
+    border: 1px solid var(--accent2); border-radius: 10px; padding: 20px;
+    margin-top: 16px;
+  }
+  .advies-box h3 { color: var(--accent); margin-bottom: 8px; font-size: 1rem; }
+  .advies-box ul { list-style: none; padding: 0; }
+  .advies-box li { padding: 5px 0; color: var(--text2); font-size: 0.9rem; }
+  .advies-box li::before { content: "→ "; color: var(--accent); }
+
+  @media (max-width: 768px) {
+    .grid { grid-template-columns: 1fr; }
+    body { padding: 10px; }
+    header h1 { font-size: 1.5rem; }
+    .stat-row { flex-direction: column; }
+    .stat { min-width: auto; }
+  }
+
+  .scenario-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .scenario-btn {
+    padding: 12px; border-radius: 8px; border: 1px solid var(--border);
+    text-align: center; cursor: pointer; transition: all .2s; background: var(--surface2);
+    font-size: 0.85rem; color: var(--text2);
+  }
+  .scenario-btn.active { border-color: var(--accent); background: rgba(34, 211, 238, 0.1); color: var(--accent); }
+  .scenario-btn:hover { border-color: var(--accent2); }
+  .scenario-btn .small { font-size: 0.7rem; color: var(--text3); margin-top: 2px; }
+
+  .tariff-row { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  .tariff-row .input-group { flex: 1; min-width: 120px; }
+
+  .inp-num {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); padding: 8px 12px; font-size: 0.9rem; width: 100%;
+    transition: border-color .2s;
+  }
+  .inp-num:focus { outline: none; border-color: var(--accent); }
+
+  /* P1 meter styles */
+  .p1-status { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .p1-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--red); flex-shrink: 0; }
+  .p1-dot.green { background: var(--green); box-shadow: 0 0 8px rgba(74,222,128,0.5); }
+  .p1-dot.yellow { background: var(--yellow); box-shadow: 0 0 8px rgba(250,204,21,0.4); }
+  .p1-energy { font-size: 2.4rem; font-weight: 700; text-align: center; padding: 10px 0; }
+  .p1-energy .unit { font-size: 0.9rem; color: var(--text3); font-weight: 400; }
+  .p1-energy.import { color: var(--orange); }
+  .p1-energy.export { color: var(--green); }
+  .p1-detail-row { display: flex; gap: 8px; margin: 8px 0; }
+  .p1-detail { flex: 1; text-align: center; background: var(--surface2); border-radius: 6px; padding: 8px; }
+  .p1-detail .val { font-size: 1rem; font-weight: 600; display: block; }
+  .p1-detail .lbl { font-size: 0.65rem; color: var(--text3); text-transform: uppercase; }
+  .p1-detail.import .val { color: var(--orange); }
+  .p1-detail.export .val { color: var(--green); }
+
+  .p1-btn {
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    border: none; border-radius: 8px; color: #fff; padding: 10px 18px;
+    font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: opacity .2s;
+    width: 100%;
+  }
+  .p1-btn:hover { opacity: 0.85; }
+  .p1-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .p1-btn.outline { background: transparent; border: 1px solid var(--border); color: var(--text2); }
+  .p1-btn.outline:hover { border-color: var(--accent2); color: var(--accent); }
+
+  .p1-timestamp { font-size: 0.75rem; color: var(--text3); text-align: center; margin-top: 4px; }
+
+  .mini-chart { width: 100%; height: 80px; margin: 8px 0; border-radius: 6px; background: var(--surface2); }
+
+  .p1-setup { padding: 12px; background: var(--surface2); border-radius: 8px; margin-top: 10px; }
+  .p1-setup label { font-size: 0.85rem; color: var(--text2); }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>⚡ EnergieSim</h1>
+  <p>Reken je scenario's door — batterij, laadstrategie & leverancier</p>
+</header>
+
+<div class="grid">
+
+  <!-- JOUW SITUATIE -->
+  <div class="card">
+    <h2>📊 Jouw situatie</h2>
+    <div class="input-group">
+      <label>Zonnepanelen <span class="value" id="lbl-panelen">15</span></label>
+      <input type="range" id="panelen" min="4" max="30" value="15" step="1">
+    </div>
+    <div class="input-group">
+      <label>Wp per paneel <span class="value" id="lbl-wp">400</span> Wp</label>
+      <input type="range" id="wp" min="300" max="500" value="400" step="10">
+    </div>
+    <div class="input-group">
+      <label>Jaarverbruik huishouden <span class="value" id="lbl-verbruik">3200</span> kWh</label>
+      <input type="range" id="verbruik" min="1500" max="6000" value="3200" step="50">
+    </div>
+    <div class="input-group">
+      <label>EV jaarkilometers <span class="value" id="lbl-evkm">12000</span> km</label>
+      <input type="range" id="evkm" min="0" max="30000" value="12000" step="500">
+    </div>
+    <div class="input-group">
+      <label>EV verbruik <span class="value" id="lbl-evwh">16</span> kWh/100km</label>
+      <input type="range" id="evwh" min="12" max="25" value="16" step="0.5">
+    </div>
+  </div>
+
+  <!-- TARIEVEN -->
+  <div class="card blue">
+    <h2>💰 Tarieven & saldering</h2>
+    <div class="tariff-row">
+      <div class="input-group">
+        <label>Inkoop dynamisch <span class="value" id="lbl-dynInk">0.24</span> €/kWh</label>
+        <input type="range" id="dynInk" min="0.10" max="0.45" value="0.24" step="0.01">
+      </div>
+      <div class="input-group">
+        <label>TLV <span class="value" id="lbl-tlv">0.09</span> €/kWh</label>
+        <input type="range" id="tlv" min="0.01" max="0.20" value="0.09" step="0.005">
+      </div>
+    </div>
+    <div class="tariff-row">
+      <div class="input-group">
+        <label>Vast tarief <span class="value" id="lbl-vast">0.27</span> €/kWh</label>
+        <input type="range" id="vastTarief" min="0.15" max="0.50" value="0.27" step="0.01">
+      </div>
+      <div class="input-group">
+        <label>Vast TLV <span class="value" id="lbl-vastTlv">0.06</span> €/kWh</label>
+        <input type="range" id="vastTlv" min="0.01" max="0.15" value="0.06" step="0.005">
+      </div>
+    </div>
+    <div class="input-group">
+      <label>Salderingsjaar <span class="value" id="lbl-saldering">2026</span></label>
+      <input type="range" id="saldering" min="2025" max="2031" value="2026" step="1">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+      <div class="input-group">
+        <label>Vastrecht (<span class="value" id="lbl-vastrecht">120</span> €/jr)</label>
+        <input type="range" id="vastrecht" min="60" max="300" value="120" step="10">
+      </div>
+      <div class="input-group">
+        <label>Terugleverkosten <span class="value" id="lbl-tlkosten">0.00</span> €/kWh</label>
+        <input type="range" id="tlkosten" min="0" max="0.12" value="0" step="0.01">
+      </div>
+    </div>
+  </div>
+
+  <!-- ZONNEPLAN -->
+  <div class="card" id="zp-card">
+    <h2>☀️ Zonneplan</h2>
+    <div id="zp-logged-out">
+      <div class="input-group">
+        <label>E-mailadres Zonneplan</label>
+        <input class="inp-num" id="zp-email" type="email" placeholder="naam@email.nl" style="margin-top:4px">
+      </div>
+      <button class="p1-btn" onclick="zpStartLogin()">🔑 Inloggen op Zonneplan</button>
+      <div id="zp-login-status" style="margin-top:8px;font-size:0.85rem;color:var(--text2)"></div>
+    </div>
+    <div id="zp-logged-in" style="display:none">
+      <div class="p1-status">
+        <div class="p1-dot green" id="zp-dot"></div>
+        <span id="zp-user">Ingelogd</span>
+        <span style="flex:1"></span>
+        <button class="p1-btn outline" style="width:auto;padding:4px 10px;font-size:0.75rem" onclick="zpLogout()">Uitloggen</button>
+      </div>
+      <div id="zp-summary" style="display:none">
+        <div class="stat-row">
+          <div class="stat green"><span class="val" id="zp-total-produced">0</span><span class="lbl">Teruggeleverd (kWh)</span></div>
+          <div class="stat orange"><span class="val" id="zp-total-delivered">0</span><span class="lbl">Afgenomen (kWh)</span></div>
+          <div class="stat"><span class="val" id="zp-tariff" style="color:var(--accent)">0</span><span class="lbl">Huidig tarief €/kWh</span></div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <button class="p1-btn" onclick="zpFetchHistory()">📥 Importeer historie</button>
+          <button class="p1-btn outline" onclick="zpFetchTariffs()">💰 Haal tarieven op</button>
+        </div>
+        <div id="zp-history-status" style="margin-top:6px;font-size:0.85rem;color:var(--text2)"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCENARIO -->
+  <div class="card green">
+    <h2>🧪 Scenario</h2>
+    <div class="radio-group" style="margin-bottom:14px">
+      <input type="radio" name="scenario" id="sc-huidig" value="huidig" checked>
+      <label for="sc-huidig">Huidig (dynamisch)</label>
+      <input type="radio" name="scenario" id="sc-vast" value="vast">
+      <label for="sc-vast">Vast contract</label>
+      <input type="radio" name="scenario" id="sc-batterij" value="batterij">
+      <label for="sc-batterij">+ Thuisbatterij</label>
+      <input type="radio" name="scenario" id="sc-slim" value="slim">
+      <label for="sc-slim">Slim laden</label>
+      <input type="radio" name="scenario" id="sc-alles" value="alles">
+      <label for="sc-alles">Alles combi</label>
+    </div>
+
+    <div id="batterij-opties" style="display:none">
+      <div class="input-group">
+        <label>Batterij capaciteit <span class="value" id="lbl-battCap">10</span> kWh</label>
+        <input type="range" id="battCap" min="2" max="30" value="10" step="1">
+      </div>
+      <div class="input-group">
+        <label>Batterij prijs <span class="value" id="lbl-battPrijs">5000</span> €</label>
+        <input type="range" id="battPrijs" min="1500" max="15000" value="5000" step="100">
+      </div>
+      <div class="input-group">
+        <label>Rendement (RTE) <span class="value" id="lbl-battRte">90</span> %</label>
+        <input type="range" id="battRte" min="75" max="98" value="90" step="1">
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTATEN -->
+  <div class="card wide">
+    <h2>📈 Resultaten — <span id="scenario-naam">Huidig</span></h2>
+    <div class="stat-row" id="result-stats">
+      <div class="stat"><span class="val" id="res-opwek">0</span><span class="lbl">Opwek /jr (kWh)</span></div>
+      <div class="stat green"><span class="val" id="res-verbruik">0</span><span class="lbl">Totaal verbruik (kWh)</span></div>
+      <div class="stat orange"><span class="val" id="res-netto">0</span><span class="lbl">Netto afname (kWh)</span></div>
+      <div class="stat red"><span class="val" id="res-kosten">€0</span><span class="lbl">Jaarkosten</span></div>
+      <div class="stat green"><span class="val" id="res-bespaar">€0</span><span class="lbl">t.o.v. vast contract</span></div>
+    </div>
+    <div id="batterij-result" style="display:none;margin-top:8px">
+      <div class="stat-row">
+        <div class="stat green"><span class="val" id="res-battCycli">0</span><span class="lbl">Cycli /jr</span></div>
+        <div class="stat green"><span class="val" id="res-battBespaar">€0</span><span class="lbl">Besparing /jr door batt</span></div>
+        <div class="stat orange"><span class="val" id="res-battTvt">—</span><span class="lbl">Terugverdientijd</span></div>
+      </div>
+    </div>
+    <div style="margin-top:14px"><canvas id="maandChart" height="280"></canvas></div>
+  </div>
+
+  <!-- MAANDTABEL -->
+  <div class="card wide">
+    <h2>📋 Maandelijkse balans</h2>
+    <div style="overflow-x:auto"><table id="maandTable"><thead><tr id="maandHead"></tr></thead><tbody id="maandBody"></tbody></table></div>
+  </div>
+
+  <!-- ADVIES -->
+  <div class="card wide">
+    <h2>💡 Advies op maat</h2>
+    <div id="advies-box" class="advies-box">
+      <h3>Analyse & aanbevelingen</h3>
+      <ul id="advies-lijst"></ul>
+    </div>
+  </div>
+
+  <!-- SCENARIO VERGELIJKING -->
+  <div class="card wide">
+    <h2>📊 Alle scenario's vergeleken</h2>
+    <div style="overflow-x:auto"><table id="vergelijkTable">
+      <thead><tr><th>Scenario</th><th>Jaarkosten</th><th>Netto afname</th><th>Teruglevering</th><th>Besparing vs vast</th></tr></thead>
+      <tbody id="vergelijkBody"></tbody>
+    </table></div>
+  </div>
+
+  <!-- PRIJSVERGELIJKING -->
+  <div class="card wide" id="comparison-card">
+    <h2>🏪 Prijsvergelijking — alle leveranciers</h2>
+    <div id="comparison-loading" style="color:var(--text2);font-size:0.9rem">Laden...</div>
+    <div id="comparison-data" style="display:none">
+      <div class="stat-row" id="dynamic-prices" style="margin-bottom:10px">
+        <div class="stat"><span class="val" id="cmp-today-avg" style="font-size:1.1rem">—</span><span class="lbl">Vandaag dynamisch gem.</span></div>
+        <div class="stat green"><span class="val" id="cmp-today-min" style="font-size:1.1rem">—</span><span class="lbl">Laagste prijs vandaag</span></div>
+        <div class="stat red"><span class="val" id="cmp-today-max" style="font-size:1.1rem">—</span><span class="lbl">Hoogste prijs vandaag</span></div>
+        <div class="stat green"><span class="val" id="cmp-dynamic-verdict" style="font-size:0.9rem;color:var(--accent)">—</span><span class="lbl">t.o.v. vast gemiddeld</span></div>
+      </div>
+      <div style="overflow-x:auto;max-height:320px;overflow-y:auto">
+        <table id="cmp-table" style="font-size:0.8rem">
+          <thead><tr>
+            <th>Leverancier</th><th>Type</th><th>Tarief</th><th>TLV</th><th>TL-kosten</th><th>Bonus</th><th>Jaarkosten</th><th>vs Zonneplan</th>
+          </tr></thead>
+          <tbody id="cmp-body"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:6px;font-size:0.7rem;color:var(--text3)">
+        Prijzen o.b.v. energievergelijk.nl (juni 2026). Jaarkosten geschat met jouw verbruik/opwek. Dynamische prijzen via EnergyZero API.
+      </div>
+    </div>
+  </div>
+
+  <!-- BATTERIJ & UITSCHAKELEN ANALYSE -->
+  <div class="card wide orange">
+    <h2>🔋 Batterij & uitschakelen analyse</h2>
+    <p style="font-size:0.85rem;color:var(--text2);margin-bottom:10px">
+      Reken door of een thuisbatterij zin heeft, of dat het goedkoper is om je panelen uit te schakelen.
+    </p>
+    <div class="grid" style="margin-bottom:0">
+      <div>
+        <div class="input-group">
+          <label>Batterij capaciteit <span class="value" id="lbl-advBattCap">10</span> kWh</label>
+          <input type="range" id="advBattCap" min="2" max="30" value="10" step="1">
+        </div>
+        <div class="input-group">
+          <label>Batterij prijs <span class="value" id="lbl-advBattPrijs">5000</span> €</label>
+          <input type="range" id="advBattPrijs" min="1500" max="15000" value="5000" step="100">
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <button class="p1-btn" onclick="analyseBatterijUitschakelen()">Bereken</button>
+        </div>
+      </div>
+      <div id="uitschakel-result">
+        <div class="stat-row">
+          <div class="stat green"><span class="val" id="adv-batt-bespaar">—</span><span class="lbl">Besparing batterij /jr</span></div>
+          <div class="stat orange"><span class="val" id="adv-batt-tvt">—</span><span class="lbl">TVT batterij</span></div>
+          <div class="stat red"><span class="val" id="adv-uitschakel-verlies">—</span><span class="lbl">Verlies bij uitschakelen</span></div>
+          <div class="stat"><span class="val" id="adv-advies" style="font-size:0.8rem;color:var(--accent)">—</span><span class="lbl">Advies</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIVE P1 METER -->
+  <div class="card wide">
+    <h2>📡 P1 meter — <span id="p1-server-status">Offline</span></h2>
+
+    <div class="p1-status">
+      <div class="p1-dot" id="p1-dot"></div>
+      <span id="p1-status-text">Geen verbinding met server</span>
+      <span style="flex:1"></span>
+      <span id="p1-refresh-age" style="font-size:0.75rem;color:var(--text3)"></span>
+    </div>
+
+    <div id="p1-data" style="display:none">
+      <div class="p1-energy" id="p1-power-display">
+        <span id="p1-power-val">0</span> <span class="unit">W</span>
+      </div>
+
+      <div class="p1-detail-row">
+        <div class="p1-detail import">
+          <span class="val" id="p1-l1">0</span>
+          <span class="lbl">Fase L1</span>
+        </div>
+        <div class="p1-detail import">
+          <span class="val" id="p1-l2">0</span>
+          <span class="lbl">Fase L2</span>
+        </div>
+        <div class="p1-detail import">
+          <span class="val" id="p1-l3">0</span>
+          <span class="lbl">Fase L3</span>
+        </div>
+      </div>
+
+      <div class="p1-detail-row">
+        <div class="p1-detail export">
+          <span class="val" id="p1-totaal-import">0</span>
+          <span class="lbl">Totaal import (kWh)</span>
+        </div>
+        <div class="p1-detail export">
+          <span class="val" id="p1-totaal-export">0</span>
+          <span class="lbl">Totaal export (kWh)</span>
+        </div>
+        <div class="p1-detail">
+          <span class="val" id="p1-solar-estimate" style="color:var(--yellow)">0</span>
+          <span class="lbl">Geschatte zonopwek (W)</span>
+        </div>
+      </div>
+
+      <div class="p1-detail-row">
+        <div class="p1-detail">
+          <span class="val" id="p1-meter-model" style="font-size:0.8rem">—</span>
+          <span class="lbl">Meter</span>
+        </div>
+        <div class="p1-detail">
+          <span class="val" id="p1-wifi" style="font-size:0.8rem">—</span>
+          <span class="lbl">WiFi</span>
+        </div>
+      </div>
+
+      <canvas id="p1-miniChart" class="mini-chart"></canvas>
+
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="p1-btn" id="p1-import-btn" disabled onclick="importP1Data()">📥 Vul jaarcijfers uit P1</button>
+        <button class="p1-btn outline" onclick="window.open('http://'+localStorage.getItem('p1ip')||'p1meter.local')">🔗 Open P1 web</button>
+      </div>
+    </div>
+
+    <div id="p1-no-data" class="advies-box" style="margin-top:0">
+      <p style="color:var(--text2);font-size:0.9rem">
+        Geen P1-meter data beschikbaar. Start de server via:
+      </p>
+      <pre style="background:var(--bg);padding:8px;border-radius:6px;margin-top:6px;font-size:0.8rem;color:var(--accent)">cd C:\Weppas\projects\energie-tool
+npm install
+node server.js</pre>
+      <div class="p1-setup">
+        <label>P1 meter IP (optioneel):</label>
+        <div style="display:flex;gap:6px;margin-top:4px">
+          <input class="inp-num" id="p1-ip-input" value="p1meter.local" placeholder="p1meter.local of 192.168.1.x">
+          <button class="p1-btn" style="width:auto;flex-shrink:0" onclick="configureP1()">Set</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</div>
+
+<script>
+// === MAANDELIJKSE ZONNEFACTOREN (Nederland) ===
+const ZON_FACTOREN = [0.034, 0.055, 0.107, 0.141, 0.155, 0.148, 0.140, 0.119, 0.088, 0.055, 0.027, 0.017];
+
+// === SALDERINGSAFBOUW ===
+const SALDERING_MAP = { 2025:1.0, 2026:0.64, 2027:0.55, 2028:0.46, 2029:0.37, 2030:0.28, 2031:0.0 };
+
+// === EVENREDIGE VERDELING JAARVERBRUIK ===
+// standaard NL profiel: iets meer in winter
+const VERBRUIK_FACTOREN = [0.100, 0.095, 0.090, 0.080, 0.075, 0.070, 0.070, 0.075, 0.080, 0.085, 0.090, 0.090];
+
+function getInputs() {
+  const panelen = +document.getElementById('panelen').value;
+  const wp = +document.getElementById('wp').value;
+  const jaarVerbruik = +document.getElementById('verbruik').value;
+  const evKm = +document.getElementById('evkm').value;
+  const evWh = +document.getElementById('evwh').value;
+  const dynInk = +document.getElementById('dynInk').value;
+  const tlv = +document.getElementById('tlv').value;
+  const vastTarief = +document.getElementById('vastTarief').value;
+  const vastTlv = +document.getElementById('vastTlv').value;
+  const salderingJaar = +document.getElementById('saldering').value;
+  const vastrecht = +document.getElementById('vastrecht').value;
+  const tlkosten = +document.getElementById('tlkosten').value;
+  const battCap = +document.getElementById('battCap').value;
+  const battPrijs = +document.getElementById('battPrijs').value;
+  const battRte = +document.getElementById('battRte').value / 100;
+
+  const evVerbruik = evKm * evWh / 100; // kWh/jaar
+  const totaalVerbruik = jaarVerbruik + evVerbruik;
+  const totaalWp = panelen * wp;
+  const jaarOpwek = totaalWp * 0.88;
+
+  const scenario = document.querySelector('input[name="scenario"]:checked').value;
+  const salderingsFractie = SALDERING_MAP[salderingJaar] ?? Math.max(0, 1 - (salderingJaar - 2025) * 0.09);
+
+  return { panelen, wp, jaarVerbruik, evKm, evWh, evVerbruik, totaalVerbruik, totaalWp, jaarOpwek,
+    dynInk, tlv, vastTarief, vastTlv, salderingJaar, salderingsFractie, vastrecht, tlkosten,
+    battCap, battPrijs, battRte, scenario };
+}
+
+function simuleer() {
+  const inp = getInputs();
+
+  // Per maand berekenen
+  const maanden = [];
+  let totaalOpwek = 0, totaalVerbruikM = 0, totaalNettoAfname = 0, totaalNettoTlv = 0;
+  let totaalKostenHuidig = 0, totaalKostenVast = 0;
+
+  // batterij tracking
+  let battSoC = 0; // 0..1
+  let battCycli = 0;
+  let battDoorzet = 0;
+  let battJaarBesparing = 0;
+  let totaalBattOntladen = 0;
+
+  // slim laden: verschuif EV naar overschot-maanden of gunstige uren
+  // we simuleren 'slim laden' door EV uit overschot te laden, niet uit het net
+
+  for (let m = 0; m < 12; m++) {
+    const opwek = inp.jaarOpwek * ZON_FACTOREN[m];
+    const vFactor = VERBRUIK_FACTOREN[m];
+    const verbruikHH = inp.jaarVerbruik * vFactor;
+    const verbruikEV = inp.evVerbruik * vFactor;
+    const verbruikTotaal = verbruikHH + verbruikEV;
+
+    // --- HUIDIG (dynamisch) ---
+    let result = berekenMaand(opwek, verbruikTotaal, verbruikHH, verbruikEV, inp, false);
+
+    // --- VAST CONTRACT ---
+    let resultVast = berekenMaand(opwek, verbruikTotaal, verbruikHH, verbruikEV, inp, true);
+
+    // --- BATTERIJ SIMULATIE ---
+    let battOntladen = 0, battLaden = 0;
+    if (inp.scenario === 'batterij' || inp.scenario === 'alles') {
+      const battResult = simuleerBatterij(result.overschot, result.tekort, inp, battSoC);
+      battOntladen = battResult.ontladen;
+      battLaden = battResult.laden;
+      battSoC = battResult.soc;
+      battDoorzet += battResult.doorzet;
+      if (battOntladen > 0) totaalBattOntladen += battOntladen;
+
+      // pas result aan
+      result.overschot = Math.max(0, result.overschot - battLaden);
+      result.tekort = Math.max(0, result.tekort - battOntladen);
+      result.nettoAfname = Math.max(0, result.tekort - result.gesaldeerd);
+      result.nettoTlv = Math.max(0, result.overschot - result.gesaldeerd);
+    }
+
+    // --- SLIM LADEN ---
+    if (inp.scenario === 'slim' || inp.scenario === 'alles') {
+      // Simuleer: 60% van EV wordt uit overschot geladen
+      const evOverschotLaden = Math.min(result.overschot, verbruikEV * 0.6);
+      result.overschot -= evOverschotLaden;
+      result.nettoTlv = Math.max(0, result.overschot - result.gesaldeerd);
+      result.nettoAfname = Math.max(0, result.tekort - result.gesaldeerd);
+    }
+
+    totaalOpwek += opwek;
+    totaalVerbruikM += verbruikTotaal;
+    totaalNettoAfname += result.nettoAfname;
+    totaalNettoTlv += result.nettoTlv;
+
+    // Kosten huidig
+    const kostenH = result.nettoAfname * inp.dynInk - result.nettoTlv * inp.tlv + result.nettoAfname * inp.tlkosten;
+    totaalKostenHuidig += kostenH;
+
+    // Kosten vast
+    const kostenV = resultVast.nettoAfname * inp.vastTarief - resultVast.nettoTlv * inp.vastTlv + resultVast.nettoAfname * inp.tlkosten;
+    totaalKostenVast += kostenV;
+
+    maanden.push({ m, opwek, verbruikTotaal, verbruikHH, verbruikEV, overschot: result.overschot,
+      tekort: result.tekort, gesaldeerd: result.gesaldeerd, nettoAfname: result.nettoAfname,
+      nettoTlv: result.nettoTlv, kostenH, kostenV, battOntladen, battLaden, battSoC });
+  }
+
+  battCycli = totaalBattOntladen / inp.battCap;
+  battJaarBesparing = 0;
+
+  // batterijbesparing: verschil met scenario zonder batterij
+  if (inp.scenario === 'batterij' || inp.scenario === 'alles') {
+    // herbereken huidig zonder batterij
+    let kostenZonder = 0;
+    for (let m = 0; m < 12; m++) {
+      const o = inp.jaarOpwek * ZON_FACTOREN[m];
+      const vF = VERBRUIK_FACTOREN[m];
+      const vT = inp.jaarVerbruik * vF + inp.evVerbruik * vF;
+      const r = berekenMaand(o, vT, inp.jaarVerbruik * vF, inp.evVerbruik * vF, inp, false);
+      kostenZonder += r.nettoAfname * inp.dynInk - r.nettoTlv * inp.tlv + r.nettoAfname * inp.tlkosten;
+    }
+    battJaarBesparing = kostenZonder - totaalKostenHuidig;
+  }
+
+  const vastJaar = totaalKostenVast + inp.vastrecht;
+  const huidigJaar = totaalKostenHuidig + (inp.scenario === 'vast' ? inp.vastrecht : 0);
+  const besparing = vastJaar - huidigJaar;
+
+  return { maanden, totaalOpwek, totaalVerbruik: totaalVerbruikM, totaalNettoAfname, totaalNettoTlv,
+    totaalKostenHuidig, totaalKostenVast, vastJaar, huidigJaar, besparing, inp,
+    battCycli, battJaarBesparing, battPrijs: inp.battPrijs, battDoorzet };
+}
+
+function berekenMaand(opwek, verbruikTotaal, verbruikHH, verbruikEV, inp, isVast) {
+  const saldering = isVast ? inp.salderingsFractie : inp.salderingsFractie;
+  const directZelf = Math.min(opwek, verbruikTotaal);
+  const overschot = Math.max(0, opwek - directZelf);
+  const tekort = Math.max(0, verbruikTotaal - directZelf);
+
+  // Salderen: overschot wegstrepen tegen tekort
+  const gesaldeerd = Math.min(overschot, tekort, overschot > 0 ? overschot * saldering : 0);
+  // Vereenvoudigd: saldering is fractie van totale gesaldeerde energie
+  const nettoAfname = Math.max(0, tekort - gesaldeerd);
+  const nettoTlv = Math.max(0, overschot - gesaldeerd);
+
+  return { opwek, verbruikTotaal, verbruikHH, verbruikEV, directZelf, overschot, tekort, gesaldeerd, nettoAfname, nettoTlv };
+}
+
+function simuleerBatterij(overschot, tekort, inp, huidigeSoC) {
+  const cap = inp.battCap;
+  const rte = inp.battRte;
+  const maxLaden = Math.min(cap * (1 - huidigeSoC), overschot * rte);
+  const maxOntladen = Math.min(cap * huidigeSoC, tekort / rte);
+
+  let laden = 0, ontladen = 0, soc = huidigeSoC;
+
+  // overflow: laad op uit overschot
+  if (overschot > 0) {
+    laden = Math.min(overschot, maxLaden);
+    soc += laden / cap;
+  }
+
+  // tekort: ontlaad
+  if (tekort > 0) {
+    ontladen = Math.min(tekort, maxOntladen);
+    soc -= ontladen / cap;
+  }
+
+  soc = Math.max(0, Math.min(1, soc));
+  const doorzet = laden + ontladen;
+  return { laden, ontladen, soc, doorzet };
+}
+
+function updateUI() {
+  const d = simuleer();
+
+  // Input labels
+  syncLabel('panelen', 'lbl-panelen');
+  syncLabel('wp', 'lbl-wp');
+  syncLabel('verbruik', 'lbl-verbruik');
+  syncLabel('evkm', 'lbl-evkm');
+  syncLabel('evwh', 'lbl-evwh', v => (v/1).toFixed(1));
+  syncLabel('dynInk', 'lbl-dynInk', v => (v).toFixed(2));
+  syncLabel('tlv', 'lbl-tlv', v => (v).toFixed(3));
+  syncLabel('vastTarief', 'lbl-vastTarief', v => (v).toFixed(2));
+  syncLabel('vastTlv', 'lbl-vastTlv', v => (v).toFixed(3));
+  syncLabel('saldering', 'lbl-saldering');
+  syncLabel('vastrecht', 'lbl-vastrecht');
+  syncLabel('tlkosten', 'lbl-tlkosten', v => (v).toFixed(2));
+  syncLabel('battCap', 'lbl-battCap');
+  syncLabel('battPrijs', 'lbl-battPrijs');
+  syncLabel('battRte', 'lbl-battRte');
+
+  // Scenario naam
+  const scMap = { huidig: 'Huidig (dynamisch)', vast: 'Vast contract', batterij: '+ Thuisbatterij', slim: 'Slim laden', alles: 'Alles combi' };
+  document.getElementById('scenario-naam').textContent = scMap[d.inp.scenario];
+
+  // Batterij opties tonen
+  document.getElementById('batterij-opties').style.display =
+    (d.inp.scenario === 'batterij' || d.inp.scenario === 'alles') ? 'block' : 'none';
+
+  // Stats
+  document.getElementById('res-opwek').textContent = Math.round(d.totaalOpwek);
+  document.getElementById('res-verbruik').textContent = Math.round(d.totaalVerbruik);
+  document.getElementById('res-netto').textContent = Math.round(d.totaalNettoAfname);
+  document.getElementById('res-kosten').textContent = '€' + Math.round(d.huidigJaar);
+  const bespaar = Math.round(d.besparing);
+  document.getElementById('res-bespaar').textContent = (bespaar >= 0 ? '€' : '-€') + Math.abs(bespaar);
+  document.getElementById('res-bespaar').parentElement.className = 'stat ' + (bespaar >= 0 ? 'green' : 'red');
+
+  // Batterij stats
+  const battDiv = document.getElementById('batterij-result');
+  if (d.inp.scenario === 'batterij' || d.inp.scenario === 'alles') {
+    battDiv.style.display = 'block';
+    document.getElementById('res-battCycli').textContent = Math.round(d.battCycli);
+    document.getElementById('res-battBespaar').textContent = '€' + Math.round(d.battJaarBesparing);
+    const tvt = d.battJaarBesparing > 0 ? (d.inp.battPrijs / d.battJaarBesparing).toFixed(1) : '∞';
+    document.getElementById('res-battTvt').textContent = d.battJaarBesparing > 0 ? tvt + ' jr' : '∞';
+  } else {
+    battDiv.style.display = 'none';
+  }
+
+  // Grafiek
+  tekenGrafiek(d.maanden);
+
+  // Maandtabel
+  vulMaandTabel(d);
+
+  // Vergelijking
+  vulVergelijking();
+
+  // Advies
+  genereerAdvies(d);
+}
+
+function syncLabel(sliderId, labelId, fmt) {
+  const v = +document.getElementById(sliderId).value;
+  document.getElementById(labelId).textContent = fmt ? fmt(v) : v;
+}
+
+function tekenGrafiek(maanden) {
+  const canvas = document.getElementById('maandChart');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth;
+  const H = 280;
+  canvas.width = W * 2; canvas.height = H * 2;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.scale(2, 2);
+
+  const pad = { top: 18, bottom: 24, left: 8, right: 8 };
+  const cw = W - pad.left - pad.right;
+  const ch = H - pad.top - pad.bottom;
+  const labels = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+
+  // vind max
+  let maxV = 0;
+  maanden.forEach(m => { maxV = Math.max(maxV, m.opwek, m.verbruikTotaal); });
+  maxV = Math.ceil(maxV / 100) * 100 + 100;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // grid
+  ctx.strokeStyle = '#1e3a5f';
+  ctx.lineWidth = 0.5;
+  for (let y = 0; y <= 4; y++) {
+    const yy = pad.top + ch - (y / 4) * ch;
+    ctx.beginPath(); ctx.moveTo(pad.left, yy); ctx.lineTo(pad.left + cw, yy); ctx.stroke();
+    ctx.fillStyle = '#64748b'; ctx.font = '9px sans-serif';
+    ctx.textAlign = 'right'; ctx.fillText(Math.round(y / 4 * maxV), pad.left - 4, yy + 3);
+  }
+
+  const barW = cw / 24 * 0.7;
+
+  maanden.forEach((m, i) => {
+    const x = pad.left + (i / 12) * cw + (cw / 24);
+
+    // opwek bar
+    const hOpwek = (m.opwek / maxV) * ch;
+    ctx.fillStyle = 'rgba(250, 204, 21, 0.8)';
+    ctx.fillRect(x - barW, pad.top + ch - hOpwek, barW, hOpwek);
+
+    // verbruik bar
+    const hVerbruik = (m.verbruikTotaal / maxV) * ch;
+    ctx.fillStyle = 'rgba(14, 165, 233, 0.7)';
+    ctx.fillRect(x, pad.top + ch - hVerbruik, barW, hVerbruik);
+
+    // x label
+    ctx.fillStyle = '#64748b'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(labels[i], x, H - 4);
+  });
+
+  // legenda
+  ctx.fillStyle = 'rgba(250, 204, 21, 0.8)'; ctx.fillRect(pad.left + 6, pad.top + 4, 10, 10);
+  ctx.fillStyle = '#e2e8f0'; ctx.font = '9px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('Zon-opwek', pad.left + 20, pad.top + 12);
+
+  ctx.fillStyle = 'rgba(14, 165, 233, 0.7)'; ctx.fillRect(pad.left + 90, pad.top + 4, 10, 10);
+  ctx.fillStyle = '#e2e8f0'; ctx.fillText('Verbruik', pad.left + 104, pad.top + 12);
+}
+
+function vulMaandTabel(d) {
+  const labels = ['Jan','Feb','Mrt','Apr','Mei','Jun','Jul','Aug','Sep','Okt','Nov','Dec'];
+  const head = document.getElementById('maandHead');
+  const body = document.getElementById('maandBody');
+
+  head.innerHTML = '<th>Maand</th><th>Opwek</th><th>Verbruik</th><th>Overschot</th><th>Tekort</th><th>Saldering</th><th>Netto afname</th><th>Teruglev.</th><th>Kosten</th>';
+  body.innerHTML = '';
+
+  let totO = 0, totV = 0, totOv = 0, totT = 0, totS = 0, totA = 0, totTlv = 0, totK = 0;
+
+  d.maanden.forEach((m, i) => {
+    totO += m.opwek; totV += m.verbruikTotaal; totOv += m.overschot; totT += m.tekort;
+    totS += m.gesaldeerd; totA += m.nettoAfname; totTlv += m.nettoTlv; totK += m.kostenH;
+    body.innerHTML += `<tr>
+      <td>${labels[i]}</td>
+      <td>${Math.round(m.opwek)}</td>
+      <td>${Math.round(m.verbruikTotaal)}</td>
+      <td>${Math.round(m.overschot)}</td>
+      <td>${Math.round(m.tekort)}</td>
+      <td>${Math.round(m.gesaldeerd)}</td>
+      <td>${Math.round(m.nettoAfname)}</td>
+      <td>${Math.round(m.nettoTlv)}</td>
+      <td>€${m.kostenH.toFixed(1)}</td>
+    </tr>`;
+  });
+
+  const vastJ = d.totaalKostenVast + d.inp.vastrecht;
+  body.innerHTML += `<tr class="tot-row">
+    <td>Totaal</td>
+    <td>${Math.round(totO)}</td>
+    <td>${Math.round(totV)}</td>
+    <td>${Math.round(totOv)}</td>
+    <td>${Math.round(totT)}</td>
+    <td>${Math.round(totS)}</td>
+    <td>${Math.round(totA)}</td>
+    <td>${Math.round(totTlv)}</td>
+    <td>€${totK.toFixed(1)}</td>
+  </tr>`;
+}
+
+function vulVergelijking() {
+  // Toon alle scenario's
+  const body = document.getElementById('vergelijkBody');
+  const scs = ['huidig', 'vast', 'batterij', 'slim', 'alles'];
+  const scMap = { huidig: 'Huidig dynamisch', vast: 'Vast contract', batterij: '+ Thuisbatterij', slim: 'Slim laden', alles: 'Alles combi' };
+  const origScenario = document.querySelector('input[name="scenario"]:checked').value;
+
+  let output = '';
+  scs.forEach(sc => {
+    // Sla over als geen batterij geselecteerd en sc is batterij/alles
+    if (sc === 'batterij' || sc === 'alles') {
+      if (origScenario !== 'batterij' && origScenario !== 'alles') return;
+    }
+
+    // set scenario tijdelijk
+    document.querySelector(`input[value="${sc}"]`).checked = true;
+    const d = simuleer();
+    const vastJ = d.totaalKostenVast + d.inp.vastrecht;
+
+    const isHuidig = sc === origScenario;
+    output += `<tr style="${isHuidig ? 'background:rgba(34,211,238,0.06)' : ''}">
+      <td>${scMap[sc]} ${isHuidig ? '← actief' : ''}</td>
+      <td style="color:${d.huidigJaar > 0 ? 'var(--orange)' : 'var(--green)'};font-weight:700">€${Math.round(d.huidigJaar)}</td>
+      <td>${Math.round(d.totaalNettoAfname)} kWh</td>
+      <td>${Math.round(d.totaalNettoTlv)} kWh</td>
+      <td style="color:${d.besparing >= 0 ? 'var(--green)' : 'var(--red)'}">${d.besparing >= 0 ? '€' : '-€'}${Math.round(Math.abs(d.besparing))}</td>
+    </tr>`;
+  });
+
+  // restore
+  document.querySelector(`input[value="${origScenario}"]`).checked = true;
+  body.innerHTML = output;
+}
+
+function genereerAdvies(d) {
+  const lijst = document.getElementById('advies-lijst');
+  const adv = [];
+
+  // 1. Teruglevering vs verbruik
+  const verhouding = d.totaalNettoTlv / d.inp.salderingsFractie;
+  const nettoKosten = d.huidigJaar;
+
+  if (d.totaalNettoTlv > 500) {
+    adv.push(`Je wekt veel meer op dan je verbruikt (${Math.round(d.totaalNettoTlv)} kWh teruglevering). 
+    Met de salderingsafbouw wordt terugleveren steeds minder waard. Overweeg een thuisbatterij om meer 
+    eigen stroom te gebruiken.`);
+  } else if (d.totaalNettoAfname > d.totaalNettoTlv) {
+    adv.push(`Je verbruikt netto meer dan je opwekt (${Math.round(d.totaalNettoAfname)} kWh afname). 
+    Met een dynamisch contract kun je profiteren van lage prijzen, vooral in de zomer.`);
+  } else {
+    adv.push(`Je opwek en verbruik zijn redelijk in balans. Goed saldo!`);
+  }
+
+  // 2. Dynamisch vs vast
+  const vastJ = d.totaalKostenVast + d.inp.vastrecht;
+  const verschil = vastJ - d.huidigJaar;
+  if (verschil > 100) {
+    adv.push(`Dynamisch is €${Math.round(verschil)}/jr voordeliger dan een vast contract. 
+    Blijf bij Zonneplan, maar overweeg een batterij om nog meer te besparen.`);
+  } else if (verschil > -100) {
+    adv.push(`Dynamisch en vast ontlopen elkaar weinig (€${Math.round(Math.abs(verschil))}/jr verschil). 
+    Dynamisch heeft wel risico op pieken, maar ook kans op goedkope uren voor laden.`);
+  } else {
+    adv.push(`Vast contract is €${Math.round(Math.abs(verschil))}/jr voordeliger. 
+    Overweeg over te stappen, tenzij je waarde hecht aan flexibiliteit en groene stroom.`);
+  }
+
+  // 3. EV laden
+  const evKosten = d.inp.evVerbruik * d.inp.dynInk;
+  if (d.inp.evKm > 0) {
+    const slimBesparing = d.inp.evVerbruik * 0.6 * (d.inp.dynInk - 0.10);
+    adv.push(`Je rijdt ${d.inp.evKm} km/jaar EV. Met slim laden (op zonne-uren of goedkope nachturen) 
+    bespaar je tot €${Math.round(slimBesparing)}/jr. De Peugeot 208 laad ongeveer 7-8 uur van 0-100% 
+    aan 11kW — plan laden tussen 11:00-15:00 op zonnige dagen.`);
+  }
+
+  // 4. Batterij advies
+  if ((d.inp.scenario === 'batterij' || d.inp.scenario === 'alles') && d.battJaarBesparing > 0) {
+    const tvt = d.inp.battPrijs / d.battJaarBesparing;
+    if (tvt < 5) {
+      adv.push(`✅ Thuisbatterij van ${d.inp.battCap}kWh verdient zich terug in ${tvt.toFixed(1)} jaar. 
+      Dat is rendabel! Je bespaart €${Math.round(d.battJaarBesparing)}/jr.`);
+    } else if (tvt < 8) {
+      adv.push(`🟡 Thuisbatterij verdient zich terug in ${tvt.toFixed(1)} jaar. Op de grens van rendabel — 
+      vooral de moeite als je meer eigen verbruik wilt.`);
+    } else {
+      adv.push(`🔴 Thuisbatterij verdient zich terug in ${tvt.toFixed(1)} jaar. Dit is (nog) niet rendabel — 
+      de prijzen moeten dalen of je moet meer overschot hebben.`);
+    }
+  }
+
+  // 5. Saldering
+  if (d.inp.salderingJaar >= 2027) {
+    adv.push(`In ${d.inp.salderingJaar} is de salderingsregeling nog maar ${Math.round(d.inp.salderingsFractie * 100)}%. 
+    Hoe lager het salderingspercentage, hoe interessanter een batterij wordt om pieken op te vangen.`);
+  }
+
+  lijst.innerHTML = adv.map(a => `<li>${a}</li>`).join('');
+}
+
+// ===== P1 METER INTEGRATIE =====
+let p1History = [];
+let p1Timer = null;
+const P1_INTERVAL = 5000;
+const P1_MAX_HISTORY = 120;
+const API_BASE = location.protocol === 'file:' ? 'http://localhost:3000' : '';
+
+function apiUrl(path) {
+  return API_BASE + '/api' + path;
+}
+
+function p1Poll() {
+  fetch(apiUrl('/live'))
+    .then(r => r.json())
+    .then(data => {
+      const dot = document.getElementById('p1-dot');
+      const statusText = document.getElementById('p1-status-text');
+      const serverStatus = document.getElementById('p1-server-status');
+
+      if (data.connected) {
+        dot.className = 'p1-dot green';
+        statusText.textContent = 'Live — meet op ' + (data.meterInfo.model || 'onbekende meter');
+        serverStatus.textContent = 'Online';
+        serverStatus.style.color = 'var(--green)';
+        document.getElementById('p1-data').style.display = 'block';
+        document.getElementById('p1-no-data').style.display = 'none';
+        document.getElementById('p1-import-btn').disabled = false;
+
+        const c = data.current;
+        const isExport = c.powerW < 0;
+        const display = document.getElementById('p1-power-display');
+        display.className = 'p1-energy ' + (isExport ? 'export' : 'import');
+        document.getElementById('p1-power-val').textContent = Math.abs(c.powerW);
+        document.getElementById('p1-l1').textContent = c.powerL1W != null ? Math.round(c.powerL1W) : '—';
+        document.getElementById('p1-l2').textContent = c.powerL2W != null ? Math.round(c.powerL2W) : '—';
+        document.getElementById('p1-l3').textContent = c.powerL3W != null ? Math.round(c.powerL3W) : '—';
+        document.getElementById('p1-totaal-import').textContent = c.importTotalKwh != null ? c.importTotalKwh.toFixed(1) : '—';
+        document.getElementById('p1-totaal-export').textContent = c.exportTotalKwh != null ? c.exportTotalKwh.toFixed(1) : '—';
+        document.getElementById('p1-solar-estimate').textContent = c.solarEstimateW != null ? Math.round(c.solarEstimateW) : '—';
+        document.getElementById('p1-meter-model').textContent = data.meterInfo.model || '—';
+        document.getElementById('p1-wifi').textContent = data.meterInfo.wifiStrength != null ? data.meterInfo.wifiStrength + '%' : '—';
+        document.getElementById('p1-refresh-age').textContent = c.age < 1000 ? 'nu' : (c.age/1000).toFixed(0)+'s geleden';
+
+        // History voor mini-grafiek
+        p1History.push({ t: Date.now(), p: c.powerW });
+        if (p1History.length > P1_MAX_HISTORY) p1History.shift();
+        tekenMiniChart();
+
+      } else {
+        dot.className = 'p1-dot yellow';
+        statusText.textContent = data.error || 'Verbonden maar wacht op data...';
+        serverStatus.textContent = data.lastReading ? 'Data wachten' : 'Geen data';
+        serverStatus.style.color = 'var(--yellow)';
+        document.getElementById('p1-refresh-age').textContent = '';
+      }
+    })
+    .catch(err => {
+      const dot = document.getElementById('p1-dot');
+      dot.className = 'p1-dot';
+      document.getElementById('p1-status-text').textContent = 'Server niet bereikbaar: ' + err.message;
+      document.getElementById('p1-server-status').textContent = 'Offline';
+      document.getElementById('p1-server-status').style.color = 'var(--red)';
+      document.getElementById('p1-data').style.display = 'none';
+      document.getElementById('p1-no-data').style.display = 'block';
+      document.getElementById('p1-import-btn').disabled = true;
+    });
+}
+
+function tekenMiniChart() {
+  const canvas = document.getElementById('p1-miniChart');
+  if (!canvas || p1History.length < 2) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth;
+  const H = 80;
+  canvas.width = W * 2; canvas.height = H * 2;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.scale(2, 2);
+
+  const pad = { top: 6, bottom: 10, left: 4, right: 4 };
+  const cw = W - pad.left - pad.right;
+  const ch = H - pad.top - pad.bottom;
+
+  const vals = p1History.map(p => p.p);
+  const maxVal = Math.max(...vals.map(Math.abs), 100);
+  ctx.clearRect(0, 0, W, H);
+
+  // nul-lijn
+  const zeroY = pad.top + ch / 2;
+  ctx.strokeStyle = '#1e3a5f';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath(); ctx.moveTo(pad.left, zeroY); ctx.lineTo(pad.left + cw, zeroY); ctx.stroke();
+
+  // lijn
+  ctx.beginPath();
+  vals.forEach((v, i) => {
+    const x = pad.left + (i / (vals.length - 1)) * cw;
+    const y = zeroY - (v / maxVal) * (ch / 2);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = '#22d3ee';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // vulling onder lijn
+  const lastX = pad.left + cw;
+  ctx.lineTo(lastX, zeroY);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(34, 211, 238, 0.08)';
+  ctx.fill();
+
+  // labels
+  ctx.fillStyle = '#64748b'; ctx.font = '7px sans-serif';
+  ctx.textAlign = 'left'; ctx.fillText('+' + Math.round(maxVal) + 'W', pad.left + 2, pad.top + 6);
+  ctx.textAlign = 'left'; ctx.fillText('-' + Math.round(maxVal) + 'W', pad.left + 2, H - 4);
+}
+
+function importP1Data() {
+  fetch(apiUrl('/dashboard'))
+    .then(r => r.json())
+    .then(data => {
+      if (!data.available) {
+        alert('Nog niet genoeg P1 data. Laat de server minimaal een uur draaien voor betrouwbare cijfers.');
+        return;
+      }
+
+      // Vul de schuifjes met gemeten data
+      const importSlider = document.getElementById('verbruik');
+      const currVal = +importSlider.value;
+      const p1Year = data.projectedYearKwh;
+
+      // Stel jaarverbruik in op geprojecteerde waarde
+      if (p1Year > 0 && p1Year < 20000) {
+        importSlider.value = Math.round(p1Year);
+        importSlider.dispatchEvent(new Event('input'));
+      }
+
+      // Eventuele EV-schatting
+      if (data.currentSolarEstimateW > 100) {
+        document.getElementById('p1-status-text').textContent =
+          `☀️ Zonopwek ~${Math.round(data.currentSolarEstimateW)}W — jaarverbruik ingesteld op ~${Math.round(p1Year)} kWh (o.b.v. ${data.measuredHours}h meting)`;
+      } else {
+        document.getElementById('p1-status-text').textContent =
+          `Jaarverbruik ingesteld op ~${Math.round(p1Year)} kWh (o.b.v. ${data.measuredHours}h meting)`;
+      }
+    })
+    .catch(err => alert('Fout bij ophalen P1 data: ' + err.message));
+}
+
+function configureP1() {
+  const ip = document.getElementById('p1-ip-input').value.trim();
+  if (!ip) return;
+  localStorage.setItem('p1ip', ip);
+  fetch(apiUrl('/config'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p1Ip: ip })
+  }).then(r => r.json()).then(() => {
+    document.getElementById('p1-status-text').textContent = 'P1 IP bijgewerkt naar ' + ip + ', herstart poll...';
+    setTimeout(p1Poll, 2000);
+  }).catch(err => alert('Fout: ' + err.message));
+}
+
+// start P1 polling
+setTimeout(() => { p1Poll(); p1Timer = setInterval(p1Poll, P1_INTERVAL); }, 1000);
+
+// ===== ZONNEPLAN INTEGRATIE =====
+function zpStartLogin() {
+  const email = document.getElementById('zp-email').value.trim();
+  if (!email || !email.includes('@')) { alert('Voer een geldig e-mailadres in'); return; }
+  const status = document.getElementById('zp-login-status');
+  status.textContent = 'Bezig met inloggen...';
+
+  fetch(apiUrl('/zonneplan/login'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      status.textContent = 'Check je email! Klik op de inloglink van Zonneplan. Daarna druk op "Opnieuw poll"...';
+      status.innerHTML += '<br><button class="p1-btn outline" style="width:auto;padding:6px 14px;margin-top:6px;font-size:0.8rem" onclick="zpPollLogin()">Opnieuw poll</button>';
+      status.innerHTML += '<button class="p1-btn outline" style="width:auto;padding:6px 14px;margin-top:6px;font-size:0.8rem" onclick="setInterval(()=>zpPollLogin(),5000)">Auto-poll (elke 5s)</button>';
+      zpStartAutoPoll();
+    } else {
+      status.textContent = 'Fout: ' + (data.error || 'Onbekend');
+    }
+  })
+  .catch(err => { status.textContent = 'Serverfout: ' + err.message; });
+}
+
+let zpPollTimer = null;
+function zpStartAutoPoll() {
+  if (zpPollTimer) clearInterval(zpPollTimer);
+  zpPollTimer = setInterval(zpPollLogin, 5000);
+}
+
+function zpPollLogin() {
+  fetch(apiUrl('/zonneplan/poll'), { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        if (zpPollTimer) clearInterval(zpPollTimer);
+        document.getElementById('zp-logged-out').style.display = 'none';
+        document.getElementById('zp-logged-in').style.display = 'block';
+        document.getElementById('zp-user').textContent = 'Ingelogd op Zonneplan';
+        document.getElementById('zp-login-status').textContent = '✅ Ingelogd!';
+        zpFetchSummary();
+      } else if (data.poll) {
+        // Nog niet geactiveerd, wacht
+      } else {
+        document.getElementById('zp-login-status').textContent = '⏳ ' + (data.error || 'Wachten op email-link...');
+      }
+    })
+    .catch(err => {});
+}
+
+function zpLogout() {
+  fetch(apiUrl('/zonneplan/logout'), { method: 'POST' })
+    .then(() => {
+      document.getElementById('zp-logged-out').style.display = 'block';
+      document.getElementById('zp-logged-in').style.display = 'none';
+      document.getElementById('zp-summary').style.display = 'none';
+      if (zpPollTimer) clearInterval(zpPollTimer);
+    });
+}
+
+function zpFetchSummary() {
+  fetch(apiUrl('/zonneplan/summary'))
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        document.getElementById('zp-summary').style.display = 'block';
+        document.getElementById('zp-total-produced').textContent = Math.round(data.totalProduced || 0);
+        document.getElementById('zp-total-delivered').textContent = Math.round(data.totalDelivered || 0);
+        document.getElementById('zp-tariff').textContent = '€' + (data.currentTariff || 0).toFixed(3);
+
+        // Vul tarieven in tool
+        if (data.currentTariff > 0) {
+          document.getElementById('dynInk').value = Math.round(data.currentTariff * 100) / 100;
+          document.getElementById('dynInk').dispatchEvent(new Event('input'));
+        }
+        if (data.estimatedTlv > 0) {
+          document.getElementById('tlv').value = Math.round(data.estimatedTlv * 1000) / 1000;
+          document.getElementById('tlv').dispatchEvent(new Event('input'));
+        }
+      }
+    })
+    .catch(() => {});
+}
+
+function zpFetchHistory() {
+  const status = document.getElementById('zp-history-status');
+  status.textContent = 'Historie ophalen...';
+
+  fetch(apiUrl('/zonneplan/history'))
+    .then(r => r.json())
+    .then(data => {
+      if (data.success && data.maandCijfers && data.maandCijfers.length > 0) {
+        // Vul verbruik en opwek in op basis van echte data
+        const verbruikSlider = document.getElementById('verbruik');
+        const wpSlider = document.getElementById('wp');
+
+        // Bereken totaalWp op basis van opwek: totaalWp = jaarOpwek / 0.88
+        const jaarOpwek = data.totaalProducedKwh;
+        const jaarVerbruik = data.totaalDeliveredKwh;
+        const geschatteWp = Math.round(jaarOpwek / 0.88 / 15) * 15 * 15; // ~Wp * 15 panelen
+
+        if (jaarVerbruik > 0 && jaarVerbruik < 20000) {
+          verbruikSlider.value = Math.round(jaarVerbruik);
+          verbruikSlider.dispatchEvent(new Event('input'));
+        }
+        if (geschatteWp > 0) {
+          const wpPerPaneel = Math.round(geschatteWp / 15 / 10) * 10;
+          if (wpPerPaneel >= 300 && wpPerPaneel <= 500) {
+            document.getElementById('wp').value = wpPerPaneel;
+            document.getElementById('wp').dispatchEvent(new Event('input'));
+          }
+        }
+
+        status.innerHTML = `✅ Historie geïmporteerd! ${data.maandCijfers.length} maanden geladen. `;
+        status.innerHTML += `Jaarverbruik: ${Math.round(jaarVerbruik)} kWh, Opwek: ${Math.round(jaarOpwek)} kWh.`;
+      } else {
+        status.textContent = '⚠️ Geen historische data beschikbaar in Zonneplan.';
+      }
+    })
+    .catch(err => { status.textContent = 'Fout: ' + err.message; });
+}
+
+function zpFetchTariffs() {
+  zpFetchSummary();
+}
+
+// ===== PRIJSVERGELIJKING =====
+function fetchMarketComparison() {
+  const card = document.getElementById('comparison-card');
+  const loading = document.getElementById('comparison-loading');
+  const dataDiv = document.getElementById('comparison-data');
+
+  loading.style.display = 'block';
+  dataDiv.style.display = 'none';
+
+  // Haal huidige input op
+  const inp = getInputs();
+  const netto = inp.totaalVerbruik;
+  const opwek = inp.jaarOpwek;
+
+  fetch(apiUrl(`/market/compare?verbruik=${Math.round(netto)}&opwek=${Math.round(opwek)}&saldering=${inp.salderingsFractie}`))
+    .then(r => r.json())
+    .then(data => {
+      loading.style.display = 'none';
+      dataDiv.style.display = 'block';
+
+      // Dynamische prijzen
+      if (data.dynamisch) {
+        document.getElementById('cmp-today-avg').textContent = '€' + data.dynamisch.gemiddeld.toFixed(3);
+        document.getElementById('cmp-today-min').textContent = '€' + data.dynamisch.min.toFixed(3);
+        document.getElementById('cmp-today-max').textContent = '€' + data.dynamisch.max.toFixed(3);
+        const vsVast = data.dynamisch.gemiddeld - data.resultaten.find(r => r.naam.includes('Zonneplan'))?.tariefKwh || 0;
+        document.getElementById('cmp-dynamic-verdict').textContent =
+          (data.dynamisch.gemiddeld * 1000).toFixed(0) + ' €/MWh';
+      }
+
+      // Tabel vullen
+      const body = document.getElementById('cmp-body');
+      let html = '';
+      data.resultaten.forEach((r, i) => {
+        const isBest = i === 0;
+        const isZonneplan = r.naam.includes('Zonneplan');
+        const tovText = r.tovZonneplan > 0 ? `+€${r.tovZonneplan}` : r.tovZonneplan < 0 ? `-€${Math.abs(r.tovZonneplan)}` : '—';
+        const tovColor = r.tovZonneplan > 0 ? 'var(--red)' : r.tovZonneplan < 0 ? 'var(--green)' : 'var(--text2)';
+        html += `<tr style="${isBest ? 'background:rgba(74,222,128,0.08)' : isZonneplan ? 'background:rgba(34,211,238,0.06)' : ''}">
+          <td><strong>${r.naam}</strong> ${isBest ? '🏆' : ''} ${isZonneplan ? '← huidig' : ''}</td>
+          <td>${r.type}</td>
+          <td>€${r.tariefKwh.toFixed(3)}</td>
+          <td>€${(r.tlv || 0).toFixed(3)}</td>
+          <td>${r.tlkosten ? '€' + r.tlkosten.toFixed(2) : '—'}</td>
+          <td>${r.bonus ? '€' + r.bonus : '—'}</td>
+          <td style="font-weight:700;color:${r.jaarkosten > 0 ? 'var(--orange)' : 'var(--green)'}">€${r.jaarkosten}</td>
+          <td style="color:${tovColor}">${tovText}</td>
+        </tr>`;
+      });
+      body.innerHTML = html;
+    })
+    .catch(err => {
+      loading.textContent = 'Fout bij laden: ' + err.message;
+    });
+}
+
+// ===== BATTERIJ & UITSCHAKELEN ANALYSE =====
+function analyseBatterijUitschakelen() {
+  const inp = getInputs();
+  const battCap = +document.getElementById('advBattCap').value;
+  const battPrijs = +document.getElementById('advBattPrijs').value;
+
+  // Huidige situatie berekenen
+  const jaarVerbruik = inp.totaalVerbruik;
+  const jaarOpwek = inp.jaarOpwek;
+  const overschot = Math.max(0, jaarOpwek - jaarVerbruik);
+  const tekort = Math.max(0, jaarVerbruik - jaarOpwek);
+  const directZelf = Math.min(jaarOpwek, jaarVerbruik);
+  const inkoopPrijs = inp.dynInk;
+  const tlv = inp.tlv;
+
+  // --- BATTERIJ BEREKENING ---
+  // Simuleer: batterij vangt overschot op en ontlaadt bij tekort
+  const rte = inp.battRte; // 0.9
+  const cycliPerDag = Math.min(overschot / 365 / battCap, 1); // max 1 per dag
+  const dagelijkseDoorzet = cycliPerDag * battCap * 2; // laad + ontlaad
+  const jaarDoorzet = dagelijkseDoorzet * 365;
+
+  // Wat bespaart de batterij?
+  // Elke kWh die uit batterij komt = 1 kWh minder inkoop
+  // Elke kWh die naar batterij gaat = 1 kWh minder TLV
+  const besparingPerKwh = inkoopPrijs - tlv * rte; // inkoop - gemiste TLV (gecorrigeerd voor RTE)
+  const battJaarBesparing = Math.min(jaarDoorzet * rte, tekort) * inkoopPrijs - Math.min(jaarDoorzet / 2, overschot) * tlv;
+
+  // Realistischere berekening: batterij gebruiken in piekuren (avond)
+  // 60% van overschot gaat naar batterij, 60% van tekort wordt uit batterij gehaald
+  const battOverschot = overschot * 0.6;
+  const battTekort = tekort * 0.6;
+  const batterijCycleKwh = Math.min(battOverschot, battTekort, battCap * 365 * 0.8); // 80% benutting
+  const werkelijkBesparing = batterijCycleKwh * (inkoopPrijs - tlv);
+  const tvt = werkelijkBesparing > 0 ? battPrijs / werkelijkBesparing : Infinity;
+
+  // --- PANELEN UITSCHAKELEN BEREKENING ---
+  // Wat kost het om panelen uit te zetten?
+  // Dan koop je álle stroom van het net, geen opwek
+  const kostenZonderPanelen = jaarVerbruik * inkoopPrijs;
+  const kostenMetPanelen = Math.max(0, tekort - overschot * inp.salderingsFractie) * inkoopPrijs
+    + Math.max(0, overschot - overschot * inp.salderingsFractie) * tlv;
+  const verliesUitschakelen = kostenZonderPanelen - kostenMetPanelen;
+
+  // --- NIKS-TERUGLEVEREN (forceer saldering op 0) ---
+  const kostenGeenTlv = tekort * inkoopPrijs; // 100% inkoop, 0% TLV
+
+  // --- UI UPDATES ---
+  document.getElementById('adv-batt-bespaar').textContent = '€' + Math.round(werkelijkBesparing);
+  document.getElementById('adv-batt-tvt').textContent = tvt === Infinity ? '∞' : tvt.toFixed(1) + ' jr';
+  document.getElementById('adv-uitschakel-verlies').textContent = '-€' + Math.round(verliesUitschakelen) + '/jr';
+
+  // Advies
+  let advies = '';
+  if (tvt < 5) {
+    advies = '✅ Batterij rendabel (TVT ' + tvt.toFixed(1) + ' jr)';
+  } else if (tvt < 10) {
+    advies = '🟡 Batterij matig rendabel (TVT ' + tvt.toFixed(1) + ' jr)';
+  } else {
+    advies = '🔴 Batterij niet rendabel (TVT ' + (tvt === Infinity ? '∞' : tvt.toFixed(1) + ' jr') + ')';
+  }
+
+  if (verliesUitschakelen > 200) {
+    advies += ' | Uitschakelen kost €' + Math.round(verliesUitschakelen) + '/jr — doe dit NIET';
+  } else if (verliesUitschakelen > 50) {
+    advies += ' | Uitschakelen kost €' + Math.round(verliesUitschakelen) + '/jr — afraden';
+  } else {
+    advies += ' | Uitschakelen: minimaal verlies (€' + Math.round(verliesUitschakelen) + '/jr)';
+  }
+
+  // Check negatieve TLV of hoge TL-kosten
+  if (inp.tlkosten > 0.05) {
+    const nettoTlvOpbrengst = tlv - inp.tlkosten;
+    if (nettoTlvOpbrengst < 0) {
+      advies += ' | ⚠️ Terugleveren kost geld! Netto TLV €' + nettoTlvOpbrengst.toFixed(3) + '/kWh. Overweeg salderen-only.';
+    }
+  }
+
+  document.getElementById('adv-advies').textContent = advies;
+}
+
+// Laad vergelijking & run analyse
+setTimeout(() => {
+  fetchMarketComparison();
+  analyseBatterijUitschakelen();
+}, 2000);
+
+// Sliders voor batterij/uitschakelen
+document.getElementById('advBattCap').addEventListener('input', () => {
+  document.getElementById('lbl-advBattCap').textContent = document.getElementById('advBattCap').value;
+  analyseBatterijUitschakelen();
+});
+document.getElementById('advBattPrijs').addEventListener('input', () => {
+  document.getElementById('lbl-advBattPrijs').textContent = document.getElementById('advBattPrijs').value;
+  analyseBatterijUitschakelen();
+});
+
+// === EVENT LISTENERS ===
+const sliders = document.querySelectorAll('input[type="range"]');
+sliders.forEach(s => s.addEventListener('input', updateUI));
+
+const radios = document.querySelectorAll('input[name="scenario"]');
+radios.forEach(r => r.addEventListener('change', updateUI));
+
+// Initial render
+updateUI();
+</script>
+
+</body>
+</html>

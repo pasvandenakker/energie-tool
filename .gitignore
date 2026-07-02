@@ -1,0 +1,5 @@
+node_modules/
+p1-data.json
+p1-config.json
+zp-session.json
+*.log
