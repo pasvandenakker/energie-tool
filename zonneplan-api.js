@@ -309,8 +309,9 @@ class ZonneplanAPI {
 
     const ZON_FACTOREN = [0.034, 0.055, 0.107, 0.141, 0.155, 0.148, 0.140, 0.119, 0.088, 0.055, 0.027, 0.017];
 
-    // monthlyData = [{date: "2025-01-01", values: {d: 123000, p: 45000}}, ...]
-    // d = delivered in Wh, p = produced in Wh (beide totaal over de maand)
+    // monthlyData = [{date, values: {d: "123000", p: -45000}}, ...]
+    // d = verbruik (afname net) in Wh — API levert dit als STRING
+    // p = teruglevering (aan net) in Wh — API levert dit als NEGATIEF getal (richting)
     // We moeten de tool voeden met maandcijfers (kWh)
 
     const maandCijfers = [];
@@ -318,8 +319,8 @@ class ZonneplanAPI {
     let totaalProduced = 0;
 
     for (const m of monthlyData) {
-      const d = m.values?.d || 0;
-      const p = m.values?.p || 0;
+      const d = Number(m.values?.d) || 0;             // verbruik (Wh) — cast, want API levert string
+      const p = Math.abs(Number(m.values?.p) || 0);   // teruglevering (Wh) — abs, want API levert negatief
       totaalDelivered += d;
       totaalProduced += p;
 
