@@ -13,6 +13,8 @@ const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(16).toSt
 const PORT = process.env.PORT || 3000;
 const CONFIG_PATH = path.join(__dirname, 'p1-config.json');
 const DB_PATH = path.join(__dirname, 'p1-data.json');
+const P1_MODE = process.env.P1_MODE || 'poll';        // 'poll' = tool leest zelf de lokale meter; 'push' = data komt binnen via /api/p1/push
+const P1_PUSH_TOKEN = process.env.P1_PUSH_TOKEN || ''; // gedeeld geheim voor de push-brug (thuis-PC -> VPS)
 
 // ===== CONFIG =====
 let config = { p1Ip: 'p1meter.local', pollingInterval: 10000 };
@@ -37,52 +39,41 @@ let p1Connected = false;
 let p1Error = null;
 let pollTimer = null;
 
+// Verwerk één P1-meting (van lokale poll óf van de push-brug) naar lastReading + opslag
+function ingestP1(parsed) {
+  lastReading = {
+    timestamp: Date.now(),
+    totalPowerImportKwh: parsed.total_power_import_kwh,
+    totalPowerExportKwh: parsed.total_power_export_kwh,
+    activePowerW: parsed.active_power_w,
+    activePowerL1W: parsed.active_power_l1_w,
+    activePowerL2W: parsed.active_power_l2_w,
+    activePowerL3W: parsed.active_power_l3_w,
+    totalGasM3: parsed.total_gas_m3,
+    activeTariff: parsed.active_tariff,
+    wifiStrength: parsed.wifi_strength,
+    smrVersion: parsed.smr_version,
+    meterModel: parsed.meter_model,
+    uniqueId: parsed.unique_id
+  };
+  p1Connected = true;
+  p1Error = null;
+  readings.push(lastReading);
+  if (readings.length > MAX_READINGS) readings.splice(0, readings.length - MAX_READINGS);
+  saveReadings();
+}
+
 function fetchP1() {
-  const url = `http://${config.p1Ip}/api/v1/`;
+  const url = `http://${config.p1Ip}/api/v1/data`;
   const req = http.get(url, { timeout: 5000 }, (res) => {
     let data = '';
     res.on('data', chunk => data += chunk);
     res.on('end', () => {
-      try {
-        const parsed = JSON.parse(data);
-        lastReading = {
-          timestamp: Date.now(),
-          totalPowerImportKwh: parsed.total_power_import_kwh,
-          totalPowerExportKwh: parsed.total_power_export_kwh,
-          activePowerW: parsed.active_power_w,
-          activePowerL1W: parsed.active_power_l1_w,
-          activePowerL2W: parsed.active_power_l2_w,
-          activePowerL3W: parsed.active_power_l3_w,
-          totalGasM3: parsed.total_gas_m3,
-          activeTariff: parsed.active_tariff,
-          wifiStrength: parsed.wifi_strength,
-          smrVersion: parsed.smr_version,
-          meterModel: parsed.meter_model,
-          uniqueId: parsed.unique_id
-        };
-
-        if (!p1Connected) {
-          p1Connected = true;
-          p1Error = null;
-          console.log(`P1 meter gevonden: ${parsed.meter_model || 'onbekend'} via ${config.p1Ip}`);
-        }
-
-        readings.push(lastReading);
-        if (readings.length > MAX_READINGS) readings.splice(0, readings.length - MAX_READINGS);
-        saveReadings();
-
-      } catch (e) {
-        p1Error = 'Parse fout: ' + e.message;
-      }
+      try { ingestP1(JSON.parse(data)); }
+      catch (e) { p1Error = 'Parse fout: ' + e.message; }
     });
   });
-  req.on('error', (e) => {
-    if (p1Connected !== false) {
-      console.log(`P1 meter niet bereikbaar op ${config.p1Ip} — ${e.message}`);
-    }
-    p1Connected = false;
-    p1Error = e.message;
-  });
+  req.on('error', (e) => { p1Connected = false; p1Error = e.message; });
   req.on('timeout', () => { req.destroy(); p1Error = 'Timeout'; });
 }
 
@@ -92,7 +83,7 @@ function startPolling() {
   pollTimer = setInterval(fetchP1, config.pollingInterval);
 }
 
-startPolling();
+if (P1_MODE !== 'push') startPolling();
 
 // ===== OPNIEUW PROBEREN ANDERE IPs =====
 function scanP1Addresses() {
@@ -132,7 +123,7 @@ function scanP1Addresses() {
   });
 }
 
-setTimeout(scanP1Addresses, 5000);
+if (P1_MODE !== 'push') setTimeout(scanP1Addresses, 5000);
 
 // ===== HELPER: zon-opwek schatten =====
 function estimateSolarPower() {
@@ -219,8 +210,20 @@ app.post('/api/config', (req, res) => {
   if (req.body.p1Ip) config.p1Ip = req.body.p1Ip;
   if (req.body.pollingInterval) config.pollingInterval = req.body.pollingInterval;
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
-  startPolling();
+  if (P1_MODE !== 'push') startPolling();
   res.json({ success: true, config });
+});
+
+// Push-brug: thuis-PC leest de lokale HomeWizard en POST de rauwe /api/v1/data hierheen
+app.post('/api/p1/push', (req, res) => {
+  if (P1_PUSH_TOKEN && req.headers['x-push-token'] !== P1_PUSH_TOKEN) {
+    return res.status(403).json({ error: 'Ongeldige push-token' });
+  }
+  if (!req.body || typeof req.body.active_power_w === 'undefined') {
+    return res.status(400).json({ error: 'Geen geldige P1-data' });
+  }
+  ingestP1(req.body);
+  res.json({ success: true, readings: readings.length });
 });
 
 app.get('/api/dashboard', (req, res) => {
