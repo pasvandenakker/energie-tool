@@ -80,7 +80,7 @@ class ZonneplanAPI {
   // === AUTH FLOW ===
   async requestLogin(email) {
     const res = await this._fetch('POST', BASE, '/auth/request', { email });
-    if (res.status === 200 && res.data?.data?.uuid) {
+    if ((res.status === 200 || res.status === 201) && res.data?.data?.uuid) {
       this.loginUuid = res.data.data.uuid;
       return { success: true, uuid: this.loginUuid, message: 'Check je email en klik op de inloglink van Zonneplan' };
     }
