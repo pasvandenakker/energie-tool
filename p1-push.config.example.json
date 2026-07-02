@@ -1,0 +1,8 @@
+{
+  "p1Ip": "192.168.x.x",
+  "vpsUrl": "https://energie.soigneurs.cc/api/p1/push",
+  "user": "pascal",
+  "pass": "NGINX_BASIC_AUTH_WACHTWOORD",
+  "pushToken": "P1_PUSH_TOKEN_VAN_DE_VPS",
+  "intervalMs": 10000
+}
